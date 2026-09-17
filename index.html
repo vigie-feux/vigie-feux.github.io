@@ -620,7 +620,7 @@
             <summary>📜 Historique local des signalements (Boîte Noire)</summary>
             <div class="details-content">
                 <div class="info-box" style="margin-bottom: 12px;">
-                    <b>ℹ️ Confidentialité totale :</b> Vos rapports générés sont stockés uniquement dans la mémoire de votre téléphone en cas de besoin ou de coupure réseau.
+                    <b>ℹ️ Confidentialité totale :</b> Vos rapports sont enregistrés ici uniquement lorsque vous déclenchez un envoi, pour garder une trace en cas de coupure réseau.
                 </div>
                 <div id="historique-box" style="font-family: monospace; font-size: 0.8rem; color: #cbd5e1; max-height: 200px; overflow-y: auto; background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 8px; margin-bottom: 10px;">
                     Aucun historique pour l'instant.
@@ -879,24 +879,19 @@
         
         const smsBtn = document.getElementById('btn-sms-114');
         smsBtn.href = `sms:114?body=${encodeURIComponent(texte)}`;
-
-        // Enregistrement automatique dans la boîte noire locale
-        sauvegarderBoiteNoire(texte);
     }
 
-    // Gestion de la Boîte Noire (localStorage)
+    // Gestion de la Boîte Noire (localStorage) - Enregistrement manuel sur envoi
     function sauvegarderBoiteNoire(texteRapport) {
         try {
             let historique = JSON.parse(localStorage.getItem('vigie_feux_historique')) || [];
             const maintenant = new Date().toLocaleTimeString();
             const entree = `[${maintenant}] ${texteRapport}`;
             
-            if (historique.length === 0 || historique[0] !== entree) {
-                historique.unshift(entree);
-                if (historique.length > 10) historique.pop();
-                localStorage.setItem('vigie_feux_historique', JSON.stringify(historique));
-                afficherHistorique();
-            }
+            historique.unshift(entree);
+            if (historique.length > 10) historique.pop(); // Conserve les 10 derniers max
+            localStorage.setItem('vigie_feux_historique', JSON.stringify(historique));
+            afficherHistorique();
         } catch (e) {
             console.warn("Stockage local indisponible :", e);
         }
@@ -919,7 +914,7 @@
     function effacerHistorique() {
         try {
             localStorage.removeItem('vigie_feux_historique');
-            afficherHistorique(); // Actualise immédiatement l'affichage de la boîte noire
+            afficherHistorique();
         } catch (e) {
             console.warn("Impossible d'effacer l'historique :", e);
         }
@@ -968,6 +963,10 @@
 
     async function envoyerRapport() {
         const texteSynthese = document.getElementById('synthese-texte').innerText;
+        
+        // Enregistrement explicite dans l'historique lors du clic sur l'envoi
+        sauvegarderBoiteNoire(texteSynthese);
+
         if (navigator.share) {
             try {
                 let shareData = { title: 'Alerte Incendie', text: texteSynthese };
