@@ -891,10 +891,9 @@
             const maintenant = new Date().toLocaleTimeString();
             const entree = `[${maintenant}] ${texteRapport}`;
             
-            // Évite les doublons stricts si rien n'a changé dans la minute
             if (historique.length === 0 || historique[0] !== entree) {
                 historique.unshift(entree);
-                if (historique.length > 10) historique.pop(); // Garde les 10 derniers max
+                if (historique.length > 10) historique.pop();
                 localStorage.setItem('vigie_feux_historique', JSON.stringify(historique));
                 afficherHistorique();
             }
@@ -920,8 +919,10 @@
     function effacerHistorique() {
         try {
             localStorage.removeItem('vigie_feux_historique');
-            afficherHistorique();
-        } catch (e) {}
+            afficherHistorique(); // Actualise immédiatement l'affichage de la boîte noire
+        } catch (e) {
+            console.warn("Impossible d'effacer l'historique :", e);
+        }
     }
 
     document.getElementById('photo-input').addEventListener('change', function(event) {
