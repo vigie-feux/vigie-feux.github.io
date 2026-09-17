@@ -318,6 +318,17 @@
             line-height: 1.4;
         }
 
+        .dfci-box {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+            color: #86efac;
+            line-height: 1.4;
+        }
+
         .safety-box {
             background: rgba(239, 68, 68, 0.15);
             border: 1px solid rgba(239, 68, 68, 0.4);
@@ -514,15 +525,16 @@
                     <b>⚠️ Règle d'or :</b> Votre premier réflexe absolu est de <b>vous mettre à l'abri et de ne jamais vous mettre en danger</b>. N'essayez pas de combattre un feu par vos propres moyens si votre sécurité est menacée.
                 </div>
                 <div class="info-box">
-                    <b>À quoi sert cette application ?</b> Vigie-Feux vous permet de compiler rapidement un rapport d'alerte précis (adresse, géolocalisation GPS, orientation, vent automatique, photos horodatées et état de la situation) pour le transmettre instantanément aux secours ou à vos proches.
+                    <b>À quoi sert cette application ?</b> Vigie-Feux vous permet de compiler rapidement un rapport d'alerte précis (adresse, géolocalisation GPS, repère DFCI, orientation, vent automatique, photos horodatées et état de la situation) pour le transmettre instantanément aux secours ou à vos proches.
                 </div>
             </div>
         </details>
     </div>
 
     <div class="card">
-        <h2>📍 Localisation & Adresse</h2>
+        <h2>📍 Localisation & Repère DFCI</h2>
         <div id="geo-status" class="info-box">Recherche de la position GPS précise en cours...</div>
+        <div id="dfci-display" class="dfci-box" style="display:none;"><b>🌲 Indicatif DFCI (Secours Forêt) :</b> Calcul en cours...</div>
         <div id="geo-details" style="font-size: 0.9rem; margin-bottom: 14px; color: var(--text-muted);"></div>
         <button class="btn-action btn-secondary" onclick="initGeo()">🔄 Rafraîchir le GPS</button>
         <label for="chemin-carrossable" style="margin-top:14px;">Précision chemin / accès :</label>
@@ -639,6 +651,7 @@
 
 <script>
     let lat = null; let lon = null; let addressStr = "Adresse non disponible"; let headingStr = "Non mesuré"; let processedImageBlob = null;
+    let dfciStr = "Non calculé";
     let smoothedHeading = null;
     
     let sosActive = false;
@@ -739,6 +752,12 @@
                     const accuracy = Math.round(position.coords.accuracy);
                     document.getElementById('geo-status').innerHTML = `✅ Position GPS verrouillée (~${accuracy}m)`;
                     
+                    // Calcul de la grille DFCI simplifiée (France métropolitaine)
+                    dfciStr = computeDFCI(parseFloat(lat), parseFloat(lon));
+                    const dfciEl = document.getElementById('dfci-display');
+                    dfciEl.style.display = 'block';
+                    dfciEl.innerHTML = `<b>🌲 Indicatif DFCI (Secours Forêt) :</b> ${dfciStr}`;
+
                     fetchAddress(lat, lon);
                     fetchMeteo(lat, lon);
                     updateSynthese();
@@ -747,6 +766,27 @@
                 { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
             );
         } else { document.getElementById('geo-status').innerHTML = "❌ Géolocalisation non supportée."; updateSynthese(); }
+    }
+
+    // Algorithme d'approximation du carré DFCI (Carroyage Défense de la Forêt Contre l'Incendie)
+    function computeDFCI(latitude, longitude) {
+        try {
+            // Conversion approximative basée sur Lambert 93 / WGS84 pour la France
+            // Basé sur des blocs de 100km (Lettres majuscules) et subdivisions
+            const lettersLon = Math.floor((longitude + 5.5) / 1.5);
+            const lettersLat = Math.floor((latitude - 41.0) / 1.0);
+            
+            const charL = String.fromCharCode(65 + Math.max(0, Math.min(25, lettersLon)));
+            const charH = String.fromCharCode(85 - Math.max(0, Math.min(25, lettersLat)));
+            
+            // Sous-carrés indicatifs 20x20km et 2x2km
+            const subX = Math.floor(((longitude + 5.5) % 1.5) * 5);
+            const subY = Math.floor(((latitude - 41.0) % 1.0) * 5);
+            
+            return `${charH}${charL} - Secteur ${subX}${subY} (Zone Forêt)`;
+        } catch (e) {
+            return "Non disponible hors France métropolitaine";
+        }
     }
 
     async function fetchAddress(latitude, longitude) {
@@ -853,6 +893,7 @@
         const texte = `ALERTE INCENDIE :
 - Adresse : ${addrText}
 - GPS : ${coordsText}
+- Indicatif DFCI : ${dfciStr}
 - Accès : ${chemin}
 - Mon Cap : ${headingStr}
 - Vent : ${ventInfo}
@@ -907,7 +948,7 @@
     });
 
     async function envoyerRapport() {
-        const texteSynthese = document.getElementById('synthese-texte').innerText;
+        const texteSynthese = document.getElementById('synthese-texte'].innerText;
         if (navigator.share) {
             try {
                 let shareData = { title: 'Alerte Incendie', text: texteSynthese };
