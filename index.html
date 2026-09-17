@@ -746,8 +746,8 @@
                     // Affichage des liens de cartes officielles
                     document.getElementById('map-links').style.display = 'flex';
                     document.getElementById('link-gmaps').href = `https://maps.google.com/?q=${lat},${lon}`;
-                    // URL de centrage direct sur cartes.gouv.fr (format officiel IGN)
-                    document.getElementById('link-cartesgouv').href = `https://www.cartes.gouv.fr/carte?p=${lat}|${lon}|15|VECTOR|STANDARD`;
+                    // Lien de recherche textuelle directe sur cartes.gouv.fr pour déclencher l'indexation de la position
+                    document.getElementById('link-cartesgouv').href = `https://www.cartes.gouv.fr/carte?text=${lat},${lon}`;
 
                     fetchAddress(lat, lon);
                     fetchMeteo(lat, lon);
@@ -863,7 +863,7 @@
         const texte = `ALERTE INCENDIE :
 - Adresse : ${addrText}
 - GPS : ${coordsText}
-- Carte officielle : https://www.cartes.gouv.fr/carte?p=${lat}|${lon}|15|VECTOR|STANDARD
+- Carte officielle : https://www.cartes.gouv.fr/carte?text=${lat},${lon}
 - Accès : ${chemin}
 - Mon Cap : ${headingStr}
 - Vent : ${ventInfo}
