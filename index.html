@@ -10,9 +10,6 @@
     <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" href="./favicon.png">
 
-    <!-- Script de génération de QR code (léger et gérable hors-ligne via cache) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-
     <style>
         :root {
             --primary: #ef4444;
@@ -346,15 +343,6 @@
             line-height: 1.5;
         }
 
-        .qr-container {
-            text-align: center;
-            margin: 16px 0;
-            background: white;
-            padding: 14px;
-            border-radius: 12px;
-            box-sizing: border-box;
-        }
-
         .compass-container {
             text-align: center;
             margin: 15px 0;
@@ -526,19 +514,16 @@
                     <b>⚠️ Règle d'or :</b> Votre premier réflexe absolu est de <b>vous mettre à l'abri et de ne jamais vous mettre en danger</b>. N'essayez pas de combattre un feu par vos propres moyens si votre sécurité est menacée.
                 </div>
                 <div class="info-box">
-                    <b>À quoi sert cette application ?</b> Vigie-Feux vous permet de compiler rapidement un rapport d'alerte précis (adresse, géolocalisation GPS, cartes Google Maps, orientation, vent automatique, photos horodatées et état de la situation) pour le transmettre instantanément.
+                    <b>À quoi sert cette application ?</b> Vigie-Feux vous permet de compiler rapidement un rapport d'alerte précis (adresse, géolocalisation GPS, orientation, vent automatique, photos horodatées et état de la situation) pour le transmettre instantanément aux secours ou à vos proches.
                 </div>
             </div>
         </details>
     </div>
 
     <div class="card">
-        <h2>📍 Localisation & Cartes</h2>
+        <h2>📍 Localisation & Adresse</h2>
         <div id="geo-status" class="info-box">Recherche de la position GPS précise en cours...</div>
         <div id="geo-details" style="font-size: 0.9rem; margin-bottom: 14px; color: var(--text-muted);"></div>
-        <div id="map-links" style="display: none; margin-bottom: 14px; display: flex; gap: 8px; flex-wrap: wrap;">
-            <a id="link-gmaps" href="#" target="_blank" class="btn-action btn-secondary" style="margin: 0; flex: 1; font-size: 0.85rem; padding: 8px;">🗺️ Ouvrir sur Google Maps</a>
-        </div>
         <button class="btn-action btn-secondary" onclick="initGeo()">🔄 Rafraîchir le GPS</button>
         <label for="chemin-carrossable" style="margin-top:14px;">Précision chemin / accès :</label>
         <input type="text" id="chemin-carrossable" placeholder="Ex: Chemin forestier accessible aux 4x4, barrière ouverte...">
@@ -621,17 +606,10 @@
         </div>
     </div>
 
-    <!-- Synthèse, QR Code Hors-Réseau et Envoi -->
+    <!-- Synthèse et Envoi en bas de page (Message+Photo et SMS d'urgence 114) -->
     <div class="card">
-        <h2>📋 Synthèse et QR Code d'Urgence</h2>
+        <h2>📋 Synthèse et Envoi</h2>
         <div id="synthese-texte" class="summary-box">Chargement...</div>
-        
-        <!-- Bloc QR Code Zéro Réseau -->
-        <div class="qr-container">
-            <p style="color: #0f172a; font-weight: 700; margin: 0 0 8px 0; font-size: 0.85rem;">📲 QR Code d'urgence (À flasher en zone blanche / sans réseau)</p>
-            <canvas id="qr-code" style="max-width: 180px; height: auto; display: block; margin: 0 auto;"></canvas>
-        </div>
-
         <button class="btn-action btn-share" onclick="envoyerRapport()">📤 Envoyer Message + Photo</button>
         <a id="btn-sms-114" href="sms:114?body=" class="btn-sms-114">💬 Envoyer uniquement le texte aux Urgences (114)</a>
     </div>
@@ -666,13 +644,6 @@
     let sosActive = false;
     let flashTrack = null;
     let sosInterval = null;
-
-    // Instance QRious pour la génération dynamique du QR Code
-    const qr = new QRious({
-        element: document.getElementById('qr-code'),
-        size: 180,
-        level: 'M'
-    });
 
     async function toggleSOS() {
         const btn = document.getElementById('btn-sos-toggle');
@@ -768,10 +739,6 @@
                     const accuracy = Math.round(position.coords.accuracy);
                     document.getElementById('geo-status').innerHTML = `✅ Position GPS verrouillée (~${accuracy}m)`;
                     
-                    // Lien Google Maps direct et infaillible
-                    document.getElementById('map-links').style.display = 'flex';
-                    document.getElementById('link-gmaps').href = `https://maps.google.com/?q=${lat},${lon}`;
-
                     fetchAddress(lat, lon);
                     fetchMeteo(lat, lon);
                     updateSynthese();
@@ -790,14 +757,14 @@
             const data = await response.json();
             if (data && data.display_name) {
                 addressStr = data.display_name;
-                document.getElementById('geo-details').innerHTML = `<b>Adresse :</b> ${addressStr}<br><b>GPS :</b> ${lat}, ${lon}`;
+                document.getElementById('geo-details').innerHTML = `<b>Adresse :</b> ${addressStr}<br><b>GPS :</b> ${lat}, ${lon} <br><a href="https://maps.google.com/?q=${lat},${lon}" target="_blank" style="color:#60a5fa; font-weight:500;">Ouvrir sur la carte</a>`;
             } else {
-                document.getElementById('geo-details').innerHTML = `<b>GPS :</b> ${lat}, ${lon}`;
+                document.getElementById('geo-details').innerHTML = `<b>GPS :</b> ${lat}, ${lon} <br><a href="https://maps.google.com/?q=${lat},${lon}" target="_blank" style="color:#60a5fa; font-weight:500;">Ouvrir sur la carte</a>`;
             }
             updateSynthese();
         } catch (e) {
             console.warn("Erreur géocodage inverse : ", e);
-            document.getElementById('geo-details').innerHTML = `<b>GPS :</b> ${lat}, ${lon}`;
+            document.getElementById('geo-details').innerHTML = `<b>GPS :</b> ${lat}, ${lon} <br><a href="https://maps.google.com/?q=${lat},${lon}" target="_blank" style="color:#60a5fa; font-weight:500;">Ouvrir sur la carte</a>`;
             updateSynthese();
         }
     }
@@ -861,7 +828,7 @@
             }
         };
         if ('ondeviceorientationabsolute' in window) { window.addEventListener('deviceorientationabsolute', handleOrientation, true); } 
-        else { window.addEventListener('deviceorientation', window.hasOwnProperty('ondeviceorientation') ? 'deviceorientation' : 'deviceorientation', true); }
+        else { window.addEventListener('deviceorientation', handleOrientation, true); }
         document.getElementById('compass-status').innerHTML = "⏳ Calibrage boussole en cours...";
     }
 
@@ -886,7 +853,6 @@
         const texte = `ALERTE INCENDIE :
 - Adresse : ${addrText}
 - GPS : ${coordsText}
-- Google Maps : https://maps.google.com/?q=${lat},${lon}
 - Accès : ${chemin}
 - Mon Cap : ${headingStr}
 - Vent : ${ventInfo}
@@ -895,9 +861,6 @@
         
         document.getElementById('synthese-texte').innerText = texte;
         
-        // Mise à jour automatique et instantanée du QR Code
-        qr.value = texte;
-
         const smsBtn = document.getElementById('btn-sms-114');
         smsBtn.href = `sms:114?body=${encodeURIComponent(texte)}`;
     }
