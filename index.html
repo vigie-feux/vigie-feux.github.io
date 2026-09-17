@@ -606,12 +606,28 @@
         </div>
     </div>
 
-    <!-- Synthèse et Envoi en bas de page (Message+Photo et SMS d'urgence 114) -->
+    <!-- Synthèse et Envoi en bas de page -->
     <div class="card">
         <h2>📋 Synthèse et Envoi</h2>
         <div id="synthese-texte" class="summary-box">Chargement...</div>
         <button class="btn-action btn-share" onclick="envoyerRapport()">📤 Envoyer Message + Photo</button>
         <a id="btn-sms-114" href="sms:114?body=" class="btn-sms-114">💬 Envoyer uniquement le texte aux Urgences (114)</a>
+    </div>
+
+    <!-- Tiroir Boîte Noire / Historique Local des Alertes -->
+    <div class="card">
+        <details>
+            <summary>📜 Historique local des signalements (Boîte Noire)</summary>
+            <div class="details-content">
+                <div class="info-box" style="margin-bottom: 12px;">
+                    <b>ℹ️ Confidentialité totale :</b> Vos rapports générés sont stockés uniquement dans la mémoire de votre téléphone en cas de besoin ou de coupure réseau.
+                </div>
+                <div id="historique-box" style="font-family: monospace; font-size: 0.8rem; color: #cbd5e1; max-height: 200px; overflow-y: auto; background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+                    Aucun historique pour l'instant.
+                </div>
+                <button class="btn-action btn-secondary" onclick="effacerHistorique()" style="margin: 0; padding: 8px; font-size: 0.85rem;">🗑️ Effacer l'historique</button>
+            </div>
+        </details>
     </div>
 
     <!-- Carte d'aide à l'installation iOS (PWA) -->
@@ -828,7 +844,7 @@
             }
         };
         if ('ondeviceorientationabsolute' in window) { window.addEventListener('deviceorientationabsolute', handleOrientation, true); } 
-        else { window.addEventListener('deviceorientation', handleOrientation, true); }
+        else { window.addEventListener('deviceorientation', window.hasOwnProperty('ondeviceorientation') ? 'deviceorientation' : 'deviceorientation', true); }
         document.getElementById('compass-status').innerHTML = "⏳ Calibrage boussole en cours...";
     }
 
@@ -863,6 +879,49 @@
         
         const smsBtn = document.getElementById('btn-sms-114');
         smsBtn.href = `sms:114?body=${encodeURIComponent(texte)}`;
+
+        // Enregistrement automatique dans la boîte noire locale
+        sauvegarderBoiteNoire(texte);
+    }
+
+    // Gestion de la Boîte Noire (localStorage)
+    function sauvegarderBoiteNoire(texteRapport) {
+        try {
+            let historique = JSON.parse(localStorage.getItem('vigie_feux_historique')) || [];
+            const maintenant = new Date().toLocaleTimeString();
+            const entree = `[${maintenant}] ${texteRapport}`;
+            
+            // Évite les doublons stricts si rien n'a changé dans la minute
+            if (historique.length === 0 || historique[0] !== entree) {
+                historique.unshift(entree);
+                if (historique.length > 10) historique.pop(); // Garde les 10 derniers max
+                localStorage.setItem('vigie_feux_historique', JSON.stringify(historique));
+                afficherHistorique();
+            }
+        } catch (e) {
+            console.warn("Stockage local indisponible :", e);
+        }
+    }
+
+    function afficherHistorique() {
+        const box = document.getElementById('historique-box');
+        try {
+            let historique = JSON.parse(localStorage.getItem('vigie_feux_historique')) || [];
+            if (historique.length === 0) {
+                box.innerText = "Aucun historique pour l'instant.";
+            } else {
+                box.innerText = historique.join("\n\n--------------------\n\n");
+            }
+        } catch (e) {
+            box.innerText = "Erreur de lecture de l'historique.";
+        }
+    }
+
+    function effacerHistorique() {
+        try {
+            localStorage.removeItem('vigie_feux_historique');
+            afficherHistorique();
+        } catch (e) {}
     }
 
     document.getElementById('photo-input').addEventListener('change', function(event) {
@@ -926,7 +985,9 @@
         element.addEventListener('input', updateSynthese);
         element.addEventListener('change', updateSynthese);
     });
+    
     initGeo();
+    afficherHistorique();
 
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
